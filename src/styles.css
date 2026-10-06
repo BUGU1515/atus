@@ -142,3 +142,33 @@
     color: var(--color-foreground);
   }
 }
+
+/* ===== Aptus ===== */
+:root{
+  --azul: oklch(0.52 0.19 272);
+  --tinta: oklch(0.2 0.03 275);
+  --papel: oklch(0.966 0.012 275);
+  --nota: oklch(0.9 0.12 98);
+  --rosa: oklch(0.85 0.07 350);
+  --erro: oklch(0.52 0.19 27);
+  --branco: oklch(1 0 0);
+}
+@theme inline{
+  --color-azul: var(--azul); --color-tinta: var(--tinta); --color-papel: var(--papel);
+  --color-nota: var(--nota); --color-rosa: var(--rosa); --color-erro: var(--erro); --color-branco: var(--branco);
+  --font-sans: "Sora", "Trebuchet MS", system-ui, sans-serif;
+}
+@layer components{
+  .ap-btn{font-weight:600;padding:14px 18px;border:2px solid var(--tinta);background:var(--branco);color:var(--tinta);border-radius:10px;cursor:pointer;transition:transform .15s}
+  .ap-btn:hover{transform:translateY(-1px)}
+  .ap-btn:disabled{opacity:.6;cursor:default;transform:none}
+  .ap-btn-primario{background:var(--azul);color:var(--branco)}
+  .ap-input{font:inherit;padding:12px;border:2px solid var(--tinta);border-radius:10px;background:var(--branco);width:100%;color:var(--tinta)}
+  .ap-card{background:var(--branco);border:2px solid var(--tinta);border-radius:12px;padding:14px}
+  .ap-nota{background:var(--nota);transform:rotate(-1.5deg);box-shadow:2px 3px 0 color-mix(in oklch,var(--tinta) 15%,transparent)}
+  .ap-logo{animation:ap-entra .7s ease-out both}
+}
+@keyframes ap-entra{from{transform:translateY(14px) scale(.94);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.ap-logo{animation:none}}
+body{font-family:var(--font-sans);background:var(--papel);color:var(--tinta)}
+:focus-visible{outline:3px solid var(--azul);outline-offset:2px}
