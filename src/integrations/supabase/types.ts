@@ -14,13 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      candidaturas: {
+        Row: {
+          candidato_id: string
+          criado_em: string
+          id: string
+          status: string
+          vaga_id: string
+        }
+        Insert: {
+          candidato_id: string
+          criado_em?: string
+          id?: string
+          status?: string
+          vaga_id: string
+        }
+        Update: {
+          candidato_id?: string
+          criado_em?: string
+          id?: string
+          status?: string
+          vaga_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidaturas_candidato_id_fkey"
+            columns: ["candidato_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidaturas_vaga_id_fkey"
+            columns: ["vaga_id"]
+            isOneToOne: false
+            referencedRelation: "vagas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          criado_em: string
+          id: string
+          nome: string
+          tipo: string
+        }
+        Insert: {
+          criado_em?: string
+          id: string
+          nome: string
+          tipo: string
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          nome?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
+      vagas: {
+        Row: {
+          cidade: string | null
+          criado_em: string
+          descricao: string
+          empresa_id: string
+          id: string
+          modalidade: string | null
+          salario: string | null
+          titulo: string
+        }
+        Insert: {
+          cidade?: string | null
+          criado_em?: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          modalidade?: string | null
+          salario?: string | null
+          titulo: string
+        }
+        Update: {
+          cidade?: string | null
+          criado_em?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          modalidade?: string | null
+          salario?: string | null
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vagas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      tipo_usuario: { Args: { _uid: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
