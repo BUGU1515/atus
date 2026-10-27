@@ -17,6 +17,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Tela = "entrada" | "login" | "cadastro" | "vagas";
+type Aba = "vagas" | "candidaturas" | "perfil";
 type Perfil = { id: string; nome: string; tipo: "candidato" | "empresa" };
 type Vaga = {
   id: string; titulo: string; descricao: string; cidade: string | null;
@@ -67,12 +68,12 @@ function Aptus() {
               <button className="ap-btn ap-btn-primario" onClick={() => setTela("login")}>Fazer login</button>
               <button className="ap-btn" onClick={() => setTela("cadastro")}>Criar cadastro</button>
             </div>
-            <p className="ap-nota mt-7 px-3.5 py-2.5 text-sm">Sua conta está segura. Seus dados ficam só com você.</p>
+            <p className="mt-7 flex items-center gap-2 text-sm opacity-70">🔒 Sua conta está segura. Seus dados ficam só com você.</p>
           </section>
         )}
         {tela === "login" && <Login ir={setTela} />}
         {tela === "cadastro" && <Cadastro ir={setTela} avisar={avisar} />}
-        {tela === "vagas" && perfil && <Vagas perfil={perfil} avisar={avisar} />}
+        {tela === "vagas" && perfil && <AreaLogada perfil={perfil} setPerfil={setPerfil} avisar={avisar} />}
       </main>
       <div
         role="status"
@@ -227,9 +228,9 @@ function Vagas({ perfil, avisar }: { perfil: Perfil; avisar: (t: string) => void
 
   return (
     <section className="flex flex-col">
-      <header className="mb-3.5 flex items-center justify-between">
-        <strong>Olá, {perfil.nome.split(" ")[0]}</strong>
-        <button className="font-semibold text-azul" onClick={() => supabase.auth.signOut()}>Sair</button>
+      <header className="mb-4">
+        <p className="text-sm opacity-70">Olá, {perfil.nome.split(" ")[0]}</p>
+        <h2 className="text-2xl font-bold">{perfil.tipo === "empresa" ? "Suas oportunidades" : "Vagas para você"}</h2>
       </header>
       <input className="ap-input" type="search" placeholder="Buscar por cargo, descrição ou cidade" value={busca} onChange={(e) => setBusca(e.target.value)} />
       <div className="my-4 grid gap-3" aria-live="polite">
@@ -247,7 +248,7 @@ function Vagas({ perfil, avisar }: { perfil: Perfil; avisar: (t: string) => void
             )}
           </article>
         )) : (
-          <p className="rounded-xl bg-rosa p-6 text-center">Nenhuma vaga encontrada. Tente outra busca.</p>
+          <p className="ap-card p-6 text-center opacity-80">Nenhuma vaga encontrada. Tente outra busca.</p>
         )}
       </div>
       {perfil.tipo === "empresa" && (
@@ -263,6 +264,123 @@ function Vagas({ perfil, avisar }: { perfil: Perfil; avisar: (t: string) => void
           <button className="ap-btn ap-btn-primario">Publicar vaga</button>
         </form>
       )}
+    </section>
+  );
+}
+
+function AreaLogada({ perfil, setPerfil, avisar }: { perfil: Perfil; setPerfil: (p: Perfil) => void; avisar: (t: string) => void }) {
+  const [aba, setAba] = useState<Aba>("vagas");
+  const abas: { id: Aba; rotulo: string; icone: string }[] = [
+    { id: "vagas", rotulo: "Vagas", icone: "⌕" },
+    { id: "candidaturas", rotulo: perfil.tipo === "empresa" ? "Recebidas" : "Candidaturas", icone: "▤" },
+    { id: "perfil", rotulo: "Perfil", icone: "◉" },
+  ];
+  return (
+    <div className="pb-24">
+      {aba === "vagas" && <Vagas perfil={perfil} avisar={avisar} />}
+      {aba === "candidaturas" && <Candidaturas perfil={perfil} />}
+      {aba === "perfil" && <PerfilTela perfil={perfil} setPerfil={setPerfil} avisar={avisar} />}
+      <nav className="fixed inset-x-0 bottom-0 border-t-2 border-tinta bg-branco" aria-label="Navegação principal">
+        <div className="mx-auto grid max-w-[420px] grid-cols-3">
+          {abas.map((a) => (
+            <button key={a.id} onClick={() => setAba(a.id)} aria-current={aba === a.id ? "page" : undefined}
+              className={`flex flex-col items-center gap-0.5 py-2.5 text-xs font-semibold ${aba === a.id ? "text-azul" : "opacity-60"}`}>
+              <span className="text-xl leading-none">{a.icone}</span>{a.rotulo}
+            </button>
+          ))}
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+type Cand = { id: string; status: string; criado_em: string; vaga: { titulo: string; cidade: string | null } | null; candidato: { nome: string } | null };
+const STATUS: Record<string, string> = { enviada: "Enviada", em_analise: "Em análise", aprovada: "Aprovada", recusada: "Recusada" };
+
+function Candidaturas({ perfil }: { perfil: Perfil }) {
+  const [lista, setLista] = useState<Cand[] | null>(null);
+  useEffect(() => {
+    const q = supabase.from("candidaturas")
+      .select("id,status,criado_em,vaga:vagas!inner(titulo,cidade,empresa_id),candidato:profiles(nome)")
+      .order("criado_em", { ascending: false });
+    (perfil.tipo === "empresa" ? q.eq("vaga.empresa_id", perfil.id) : q.eq("candidato_id", perfil.id))
+      .then(({ data }) => setLista((data as unknown as Cand[]) ?? []));
+  }, [perfil]);
+  return (
+    <section>
+      <h2 className="mb-4 text-2xl font-bold">{perfil.tipo === "empresa" ? "Candidaturas recebidas" : "Minhas candidaturas"}</h2>
+      {lista === null ? <p className="opacity-70">Carregando...</p> : lista.length === 0 ? (
+        <p className="ap-card p-6 text-center opacity-80">{perfil.tipo === "empresa" ? "Nenhuma candidatura ainda." : "Você ainda não se candidatou a nenhuma vaga."}</p>
+      ) : (
+        <div className="grid gap-3">
+          {lista.map((c) => (
+            <article key={c.id} className="ap-card flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold">{c.vaga?.titulo}</h3>
+                <p className="text-xs opacity-75">
+                  {perfil.tipo === "empresa" ? c.candidato?.nome : c.vaga?.cidade || "Brasil"} · {new Date(c.criado_em).toLocaleDateString("pt-BR")}
+                </p>
+              </div>
+              <span className="rounded-full bg-papel px-3 py-1 text-xs font-semibold">{STATUS[c.status] ?? c.status}</span>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PerfilTela({ perfil, setPerfil, avisar }: { perfil: Perfil; setPerfil: (p: Perfil) => void; avisar: (t: string) => void }) {
+  const [tela, setTela] = useState<"menu" | "editar" | "config">("menu");
+  const [nome, setNome] = useState(perfil.nome);
+  const [notif, setNotif] = useState(true);
+  if (tela === "editar") return (
+    <section className="flex flex-col">
+      <button onClick={() => setTela("menu")} className="self-start text-2xl" aria-label="Voltar">←</button>
+      <h2 className="mb-4 mt-2 text-2xl font-bold">Editar perfil</h2>
+      <form className="grid gap-3.5" onSubmit={async (e) => {
+        e.preventDefault();
+        const { error } = await supabase.from("profiles").update({ nome: nome.trim() }).eq("id", perfil.id);
+        if (error) return avisar("Não foi possível salvar.");
+        setPerfil({ ...perfil, nome: nome.trim() }); avisar("Perfil atualizado!"); setTela("menu");
+      }}>
+        <Campo rotulo="Nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+        <button className="ap-btn ap-btn-primario">Salvar</button>
+      </form>
+    </section>
+  );
+  if (tela === "config") return (
+    <section className="flex flex-col">
+      <button onClick={() => setTela("menu")} className="self-start text-2xl" aria-label="Voltar">←</button>
+      <h2 className="mb-4 mt-2 text-2xl font-bold">Configurações</h2>
+      <div className="ap-card grid divide-y divide-tinta/15 p-0">
+        <label className="flex items-center justify-between p-4 font-semibold">Notificações de vagas
+          <input type="checkbox" className="h-5 w-5 accent-[var(--azul)]" checked={notif} onChange={(e) => setNotif(e.target.checked)} />
+        </label>
+        <div className="p-4"><p className="font-semibold">Privacidade</p><p className="text-sm opacity-70">Seus dados só são compartilhados com as empresas às quais você se candidata.</p></div>
+        <div className="p-4"><p className="font-semibold">Ajuda</p><p className="text-sm opacity-70">Dúvidas? Fale com o suporte Aptus.</p></div>
+      </div>
+    </section>
+  );
+  const itens: [string, () => void][] = [
+    ["Editar perfil", () => setTela("editar")],
+    ["Configurações", () => setTela("config")],
+  ];
+  return (
+    <section>
+      <div className="mb-5 flex items-center gap-4">
+        <div className="grid h-16 w-16 place-items-center rounded-full bg-azul text-2xl font-bold text-branco">{perfil.nome[0]?.toUpperCase()}</div>
+        <div>
+          <h2 className="text-xl font-bold">{perfil.nome}</h2>
+          <p className="text-sm opacity-70">{perfil.tipo === "empresa" ? "Conta de empresa" : "Conta de candidato"}</p>
+        </div>
+      </div>
+      <div className="ap-card grid divide-y divide-tinta/15 p-0">
+        {itens.map(([r, f]) => (
+          <button key={r} onClick={f} className="flex justify-between p-4 text-left font-semibold">{r}<span>›</span></button>
+        ))}
+        <button onClick={() => supabase.auth.signOut()} className="p-4 text-left font-semibold text-erro">Sair</button>
+      </div>
     </section>
   );
 }
